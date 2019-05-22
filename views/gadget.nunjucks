@@ -1,0 +1,91 @@
+{% extends '_base.nunjucks' %}
+
+{% import '_components.njk' as comp %}
+
+{% block content %}
+<main id="sensors">
+  <div class="row">
+    <h2>Sensores:</h2>
+  </div>
+  <div class="row">
+  {% for s in sensors_cfg -%}
+    {{ comp.sensor_field(s, readonly=(not editable)) }}
+  {%- endfor %}
+  </div>
+  <hr />
+  <div class="row">
+    <h2>Actuadores:</h2>
+  </div>
+  <div class="row">
+  {% for a in actuators_cfg -%}
+    {{ comp.actuator_field(a, readonly=(not editable)) }}
+  {%- endfor %}
+  </div>
+  <hr />
+  <div class="row">
+    <h2 class="col-sm-12 col-md-4">Mensajes:</h2>
+    <ol class="col-sm-12 col-md-8 list-group" id="messages">
+    </ol>
+  </div>
+</main>
+{% endblock %}
+
+{% block script %}
+<script>
+function addMessage(str) {
+  const messages = document.getElementById('messages');
+  
+  let li = document.createElement('li');
+  li.className = 'list-group-item';
+  li.innerHTML = str;
+
+  messages.appendChild(li);
+}
+
+function updateValue(obj, value) {
+  if(obj.value === value) return;
+  let e = document.getElementById(obj.id);
+  e.value = obj.value = value;
+  addMessage('Nuevo valor de \'' + obj.id + '\': ' + obj.value);
+}
+
+const sArr = {{ sensors_cfg | dump | safe }};
+const aArr = {{ actuators_cfg | dump | safe }};
+
+const sensors = io('/sensors').on('update', (id, value) => {
+  for(const s of sArr) {
+    if(s.id !== id) continue;
+    updateValue(s, value);
+  }
+});
+
+const actuators = io('/actuators').on('update', (id, value) => {
+  for(const a of aArr) {
+    if(a.id !== id) continue;
+    updateValue(a, value)
+  }
+}).on('toggle', (id) => {
+  for(const a of aArr) {
+    if(a.id !== id) continue;
+    updateValue(a, (a.value == 'OFF') ? 'ON' : 'OFF');
+  }
+});
+
+{% if editable %}
+for(const s of sArr) {
+  let e = document.getElementById(s.id);
+  e.addEventListener('keyup', (ev) => {
+    let v = Number(e.value) || -1.0;
+    if(ev.keyCode != 13 || (v < 0.0) || v === s.value) return;
+    sensors.emit('update', s.id, v);
+  });
+}
+for(const a of aArr) {
+  let e = document.getElementById(a.id);
+  e.addEventListener('click', () => {
+    actuators.emit('toggle', a.id);
+  });
+}
+{% endif %}
+</script>
+{% endblock %}

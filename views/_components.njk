@@ -1,0 +1,52 @@
+{%- macro sensor_field(cfg, readonly=true) -%}
+<div class="col sensor-field">
+  <label for="value">{{ cfg.name | d(cfg.id) | capitalize }}</label>
+  <div>
+    <input id="{{cfg.id}}" name="value" type="text" value="{{cfg.value}}" {{'readonly' if readonly}}>
+  </div>
+</div>
+{%- endmacro -%}
+
+{%- macro actuator_field(cfg, readonly=true) -%}
+<div class="col actuator-field">
+  <label for="value">{{ cfg.name | d(cfg.id) | capitalize }}</label>
+  <div>
+    <input id="{{cfg.id}}" name="value" type="button" value="{{cfg.value}}" {{'readonly' if readonly}}>
+  </div>
+</div>
+{%- endmacro -%}
+
+{%- macro agent_field(cfg, readonly=true) -%}
+<div class="col agent-field">
+{%- for sensor, rules in cfg -%}
+  <h3>Monitorización de '{{ sensor | capitalize }}'</h3>
+  <div id="{{ sensor }}"  class="row mx-auto my-auto">
+    <p class="col-auto my-auto lead">Reglas:</p>
+    {%- for min, max in rules.minmax_on | batch(2) -%}
+    <div class="col-sm">
+      {% if min or max %}<p class="lead">Encender...</p>{% endif %}
+      {% if max %}<p>Al máximo de: <input {{ "readonly" if readonly }} type="text" name="max-off" value="{{ max }}"></p>{% endif %}
+      {% if min %}<p>Al mínimo de: <input {{ "readonly" if readonly }} type="text" name="min-off" value="{{ min }}"></p></p>{% endif %}
+    </div>
+    {% endfor %}
+    {%- for min, max in rules.minmax_off | batch(2) -%}
+    <div class="col-sm">
+      {% if min or max %}<p class="lead">Apagar...</p>{% endif %}
+      {% if min %}<p>Al mínimo de: <input {{ "readonly" if readonly }} type="text" name="min-on" value="{{ min }}"></p>{% endif %}
+      {% if max %}<p>Al máximo de: <input {{ "readonly" if readonly }} type="text" name="max-on" value="{{ max }}"></p>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="row mx-auto my-auto">
+    <p class="col-auto my-auto lead">Actuadores en escucha:</p>
+    <ul class="col list-group">
+    {% for listener in rules.listeners %}
+      <li class="list-group-item">{{listener}}</li>
+    {% endfor %}
+    </ul>
+  </div>
+  {%- else -%}
+  <p>No se han encontrado configuraciones para este agente</p>
+  {%- endfor -%}
+</div>
+{%- endmacro -%}

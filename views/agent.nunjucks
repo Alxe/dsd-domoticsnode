@@ -1,0 +1,44 @@
+{% extends '_base.nunjucks' %}
+
+{% from '_components.njk' import agent_field %}
+
+{% block content %}
+{% for cfg in agents_cfg %}
+{{ agent_field(cfg) }}
+{% endfor %}
+{% endblock %}
+
+{% block script %}
+<script>
+
+const agentsArr = {{ agents_cfg | dump | safe }};
+
+const actuators = io('/actuators');
+const sensors = io('/sensors').on('update', (id, value) => {
+  for(const agent of agentsArr) {
+    let rule = agent[id];
+    if(rule === undefined) continue;
+    
+    let [off_min, off_max] = rule.minmax_off;
+    let off = ((off_min || false) && value >= off_min) ||
+              ((off_max || false) && value <= off_max);
+
+    let [on_min, on_max] = rule.minmax_on;
+    let on = ((on_min || false) && value >= on_min) ||
+             ((on_max || false) && value <= on_max);
+    
+    for(const actId of rule.listeners) {
+      console.log(actId, on, off);
+      
+      if(!on && off) {
+        actuators.emit('update', actId, 'OFF');
+      }
+      if(!off && on) {
+        actuators.emit('update', actId, 'ON');
+      }
+    }
+  }
+});
+
+</script>
+{% endblock %}
