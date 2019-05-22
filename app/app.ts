@@ -72,6 +72,10 @@ const actuatorNamespace = io.of('/actuators').on('connect', socket => {
         console.log('saved', rec);
       }
     });
+  }).on('increase', (id: string) => {
+    actuatorNamespace.emit('increase', id);
+  }).on('decrease', (id: string) => {
+    actuatorNamespace.emit('decrease', id);
   });
 
   

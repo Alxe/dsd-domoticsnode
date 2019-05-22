@@ -16,6 +16,10 @@
   <div class="row">
     <h2>Actuadores:</h2>
   </div>
+  <div class="row align-items-center">
+    <p class="my-auto mr-3 lead">Persiana automática:</p>
+    <input type='button' class="btn btn-secondary" id="auto-blinds-btn" value="OFF">
+  </div>
   <div class="row">
   {% for a in actuators_cfg -%}
     {{ comp.actuator_field(a, readonly=(not editable)) }}
@@ -49,13 +53,43 @@ function updateValue(obj, value) {
   addMessage('Nuevo valor de \'' + obj.id + '\': ' + obj.value);
 }
 
+const ceil5 = (v) => Math.ceil(v/5)*5;
+
 const sArr = {{ sensors_cfg | dump | safe }};
 const aArr = {{ actuators_cfg | dump | safe }};
+
+const autoBlindsBtn = document.getElementById('auto-blinds-btn');
+const getAutoBlindsState = () => autoBlindsBtn.value === 'ON';
+const setAutoBlindsState = (bool) => autoBlindsBtn.value = bool ? 'ON' : 'OFF';
+autoBlindsBtn.addEventListener('click', e => {
+  setAutoBlindsState(!getAutoBlindsState());
+  if(!getAutoBlindsState()) return;
+  for(const s of sArr) {
+    if(s.id !== 'light') continue;
+    for(const a of aArr) {
+      if(a.id !== 'blinds') continue;
+      updateValue(a, s.value);
+      break;
+    }
+  }
+});
+
 
 const sensors = io('/sensors').on('update', (id, value) => {
   for(const s of sArr) {
     if(s.id !== id) continue;
-    updateValue(s, value);
+
+    const v = Number(value) < 0 ? 0 : 
+                Number(value) > 100 ? 100 : 
+                  Number(value);
+    updateValue(s, v);
+    if(s.id === 'light' && getAutoBlindsState() && v >= 10.0) {
+      for(const a of aArr) {
+        if(a.id !== 'blinds') continue;
+        updateValue(a, ceil5(v));
+        break;
+      }
+    }
   }
 });
 
@@ -67,7 +101,20 @@ const actuators = io('/actuators').on('update', (id, value) => {
 }).on('toggle', (id) => {
   for(const a of aArr) {
     if(a.id !== id) continue;
-    updateValue(a, (a.value == 'OFF') ? 'ON' : 'OFF');
+    const v = Number(a.value);
+    updateValue(a, v === 0 ? 100.0 : 0.0);
+  }
+}).on('increase', (id) => {
+  for(const a of aArr) {
+    if(a.id !== id) continue;
+    const v = Number(a.value) + 5;
+    updateValue(a, v > 100 ? 100 : v);
+  }
+}).on('decrease', (id) => {
+  for(const a of aArr) {
+    if(a.id !== id) continue;
+    const v = Number(a.value) - 5;
+    updateValue(a, v < 0 ? 0 : v);
   }
 });
 
@@ -76,15 +123,29 @@ for(const s of sArr) {
   let e = document.getElementById(s.id);
   e.addEventListener('keyup', (ev) => {
     let v = Number(e.value) || -1.0;
-    if(ev.keyCode != 13 || (v < 0.0) || v === s.value) return;
+    if(ev.keyCode != 13 || v === s.value) return;
     sensors.emit('update', s.id, v);
   });
 }
 for(const a of aArr) {
   let e = document.getElementById(a.id);
   e.addEventListener('click', () => {
+    if(a.id === 'blinds') setAutoBlindsState(false);
     actuators.emit('toggle', a.id);
   });
+
+  let eUp = document.getElementById(a.id + '-up');
+  eUp.addEventListener('click', () => {
+    if(a.id === 'blinds') setAutoBlindsState(false);
+    actuators.emit('increase', a.id);
+  });
+
+  let eDown = document.getElementById(a.id + '-down');
+  eDown.addEventListener('click', () => {
+    if(a.id === 'blinds') setAutoBlindsState(false);
+    actuators.emit('decrease', a.id);
+  });
+
 }
 {% endif %}
 </script>

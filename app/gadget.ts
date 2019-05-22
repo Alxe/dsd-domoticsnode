@@ -1,8 +1,8 @@
 import mongoose, { Schema } from "mongoose"
 
 export enum OnOffState {
-  ON  = 'ON',
-  OFF = 'OFF',
+  ON  = 100.0,
+  OFF =   0.0,
 };
 
 export type GenericConfig<T> = {

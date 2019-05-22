@@ -11,7 +11,9 @@
 <div class="col actuator-field">
   <label for="value">{{ cfg.name | d(cfg.id) | capitalize }}</label>
   <div>
-    <input id="{{cfg.id}}" name="value" type="button" value="{{cfg.value}}" {{'readonly' if readonly}}>
+    <input id="{{cfg.id}}" name="value" type="text" value="{{cfg.value}}" readonly>
+    <input id="{{cfg.id + '-down'}}" type="button" value="-" {{'readonly' if readonly}}>
+    <input id="{{cfg.id + '-up'}}" type="button" value="+" {{'readonly' if readonly}}>
   </div>
 </div>
 {%- endmacro -%}
